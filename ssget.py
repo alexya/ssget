@@ -14,7 +14,8 @@ class ProxyData:
         self.Password = ''
         self.Method = ''
 
-url = "http://www.ishadowsocks.com/"
+# url = "http://ss.ishadowx.com/"
+url = "https://global.ishadowx.net/"
 config_file = "gui-config.json"
 
 response = urllib2.urlopen(url)
@@ -36,6 +37,11 @@ def get_proxy(class_def_name):
         proxy.Port = re.split(":|\xef\xbc\x9a", hh[1].text.encode('UTF-8'))[1].strip()
         proxy.Password = re.split(":|\xef\xbc\x9a", hh[2].text.encode('UTF-8'))[1].strip()
         proxy.Method = re.split(":|\xef\xbc\x9a", hh[3].text.encode('UTF-8'))[1].strip()
+
+        # if the Port is empty, we need to set a default value such as '12345'
+        # otherwise, the SSR gui will prompt error dialog
+        if not proxy.Port:
+            proxy.Port = '12345'
         proxies.append(proxy)
         pprint("{:10}{:20}{:10}{:15}{:10}".format(proxy.Name, proxy.IPAddress, proxy.Port, proxy.Password, proxy.Method))
 
