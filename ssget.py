@@ -5,6 +5,8 @@ import json
 from bs4 import BeautifulSoup
 from collections import namedtuple
 from pprint import pprint
+from subprocess import *
+from subprocess import STARTUPINFO # for python2, we need to import STARTUPINFO
 
 class ProxyData:
     def __init__(self):
@@ -14,8 +16,8 @@ class ProxyData:
         self.Password = ''
         self.Method = ''
 
-# url = "http://ss.ishadowx.com/"
 url = "https://global.ishadowx.net/"
+url = "http://ss.ishadowx.com/"
 config_file = "gui-config.json"
 
 response = urllib2.urlopen(url)
@@ -112,6 +114,16 @@ def parse_config(file_name):
         ss = json.dumps(json_data, sort_keys = True, indent = 4, separators = (',', ': '), encoding = "utf-8", ensure_ascii = True)
         jsonFile.write(ss)
 
+    return True
+
+def launch_ssr():
+    startupinfo = STARTUPINFO()
+    startupinfo.dwFlags |=  STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow =  SW_HIDE
+    Popen("..\ShadowsocksR.exe",stdin = PIPE, stdout = PIPE,stderr=PIPE,startupinfo=startupinfo)
+
+    return True
+
 if __name__ == "__main__":
     get_proxy("col-sm-6 col-md-4 col-lg-4 us")
     get_proxy("col-sm-6 col-md-4 col-lg-4 jp")
@@ -120,4 +132,5 @@ if __name__ == "__main__":
     print
     print("Found {} shadowsocks proxy servers.".format(len(proxies)))
 
-    parse_config(config_file)
+    if (parse_config(config_file)):
+        launch_ssr()
