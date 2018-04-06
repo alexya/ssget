@@ -8,6 +8,7 @@ from pprint import pprint
 from subprocess import *
 from subprocess import STARTUPINFO # for python2, we need to import STARTUPINFO
 import requests
+import psutil
 
 class ProxyData:
     def __init__(self):
@@ -19,9 +20,12 @@ class ProxyData:
 
 config_file = "gui-config.json"
 
+# We need the absolute path to find the root of SSR, then to kill the process tree
+ssr_path = "C:\\Tools\\ShadowsocksR\\ShadowsocksR.exe"
+
 url = "https://global.ishadowx.net/"
 url = "http://ss.ishadowx.com/"
-url = "https://get.ishadowx.net/"
+url = "https://get.ishadowx.net/" # the latest address
 
 # solution 1: urlopen
 #response = urllib2.urlopen(url)
@@ -47,6 +51,7 @@ def get_proxy(class_def_name):
         if (type(x) == type(link)):
             proxy.Name = x['id']
 
+        # use HTML to parse and get the proxy directly
         hh = link.find_all("h4")
         proxy.IPAddress = re.split(":|\xef\xbc\x9a", hh[0].text.encode('UTF-8'))[1].strip()
         proxy.Port = re.split(":|\xef\xbc\x9a", hh[1].text.encode('UTF-8'))[1].strip()
@@ -129,11 +134,32 @@ def parse_config(file_name):
 
     return True
 
+def kill_proc_tree(pid, including_parent=True):
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    for child in children:
+        child.kill()
+    gone, still_alive = psutil.wait_procs(children, timeout=5)
+    if including_parent:
+        parent.kill()
+        parent.wait(5)
+
+    return True
+
 def launch_ssr():
-    startupinfo = STARTUPINFO()
-    startupinfo.dwFlags |=  STARTF_USESHOWWINDOW
-    startupinfo.wShowWindow =  SW_HIDE
-    Popen("..\ShadowsocksR.exe",stdin = PIPE, stdout = PIPE,stderr=PIPE,startupinfo=startupinfo)
+    # if the ShadowsocksR exists, then kill it first.
+    for pid in psutil.pids():
+        p = psutil.Process(pid)
+        Pa = p.parent() != None
+        if (p.name() == "ShadowsocksR.exe") and p.exe() == ssr_path:
+            print("The process ShadowsocksR.exe: {id} is found.".format(id=pid))
+            if (kill_proc_tree(pid) == True):
+                print("The process ShadowsocksR.exe: {id} is terminated successfully.".format(id=pid))
+            break
+
+    newproc = psutil.Popen([ssr_path], stdin = PIPE, stdout = PIPE, stderr = PIPE)
+    if (newproc != None):
+        print("The process ShadowsocksR.exe: {id} is restarted successfully.".format(id=newproc.pid))
 
     return True
 
