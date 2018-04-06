@@ -7,6 +7,8 @@ from collections import namedtuple
 from pprint import pprint
 from subprocess import *
 from subprocess import STARTUPINFO # for python2, we need to import STARTUPINFO
+import requests
+import psutil
 
 class ProxyData:
     def __init__(self):
@@ -16,12 +18,27 @@ class ProxyData:
         self.Password = ''
         self.Method = ''
 
-url = "https://global.ishadowx.net/"
-url = "http://ss.ishadowx.com/"
 config_file = "gui-config.json"
 
-response = urllib2.urlopen(url)
-html_doc = response.read()
+# We need the absolute path to find the root of SSR, then to kill the process tree
+ssr_path = "C:\\Tools\\ShadowsocksR\\ShadowsocksR.exe"
+
+url = "https://global.ishadowx.net/"
+url = "http://ss.ishadowx.com/"
+url = "https://get.ishadowx.net/" # the latest address
+
+# solution 1: urlopen
+#response = urllib2.urlopen(url)
+
+# solution 2: request
+# we have to simulate user-agent to a browser, otherwise, the server will return 403
+headers = {
+    'User-agent': "Mozilla 5.10",
+    'cache-control': "no-cache",
+    'postman-token': "110d2989-c941-fea3-874f-f5c3c028db49"
+    }
+response = requests.request("GET", url, headers=headers)
+html_doc = response.text
 soup = BeautifulSoup(html_doc, 'html.parser')
 proxies = []
 
@@ -34,6 +51,7 @@ def get_proxy(class_def_name):
         if (type(x) == type(link)):
             proxy.Name = x['id']
 
+        # use HTML to parse and get the proxy directly
         hh = link.find_all("h4")
         proxy.IPAddress = re.split(":|\xef\xbc\x9a", hh[0].text.encode('UTF-8'))[1].strip()
         proxy.Port = re.split(":|\xef\xbc\x9a", hh[1].text.encode('UTF-8'))[1].strip()
@@ -45,7 +63,7 @@ def get_proxy(class_def_name):
         if not proxy.Port:
             proxy.Port = '12345'
         proxies.append(proxy)
-        pprint("{:10}{:20}{:10}{:15}{:10}".format(proxy.Name, proxy.IPAddress, proxy.Port, proxy.Password, proxy.Method))
+        pprint("{:10}{:20}{:10}{:30}{:10}".format(proxy.Name, proxy.IPAddress, proxy.Port, proxy.Password, proxy.Method))
 
 def parse_config(file_name):
     # ssget folder will be put under the shadowsocksR
@@ -54,9 +72,6 @@ def parse_config(file_name):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parent_path = os.path.abspath(os.path.join(dir_path, os.pardir))
     path_file_name = os.path.join(parent_path, file_name)
-
-    print
-    print("Found the config file {}.".format(path_file_name))
 
     with open(path_file_name) as jsonFile:
         json_data = json.load(jsonFile)
@@ -114,17 +129,43 @@ def parse_config(file_name):
         ss = json.dumps(json_data, sort_keys = True, indent = 4, separators = (',', ': '), encoding = "utf-8", ensure_ascii = True)
         jsonFile.write(ss)
 
+    print
+    print("Updated the config file {} successfully.".format(path_file_name))
+
+    return True
+
+def kill_proc_tree(pid, including_parent=True):
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    for child in children:
+        child.kill()
+    gone, still_alive = psutil.wait_procs(children, timeout=5)
+    if including_parent:
+        parent.kill()
+        parent.wait(5)
+
     return True
 
 def launch_ssr():
-    startupinfo = STARTUPINFO()
-    startupinfo.dwFlags |=  STARTF_USESHOWWINDOW
-    startupinfo.wShowWindow =  SW_HIDE
-    Popen("..\ShadowsocksR.exe",stdin = PIPE, stdout = PIPE,stderr=PIPE,startupinfo=startupinfo)
+    # if the ShadowsocksR exists, then kill it first.
+    for pid in psutil.pids():
+        p = psutil.Process(pid)
+        Pa = p.parent() != None
+        if (p.name() == "ShadowsocksR.exe") and p.exe() == ssr_path:
+            print("The process ShadowsocksR.exe: {id} is found.".format(id=pid))
+            if (kill_proc_tree(pid) == True):
+                print("The process ShadowsocksR.exe: {id} is terminated successfully.".format(id=pid))
+            break
+
+    newproc = psutil.Popen([ssr_path], stdin = PIPE, stdout = PIPE, stderr = PIPE)
+    if (newproc != None):
+        print("The process ShadowsocksR.exe: {id} is restarted successfully.".format(id=newproc.pid))
 
     return True
 
 if __name__ == "__main__":
+    pprint("{:10}{:20}{:10}{:30}{:10}".format("Name","IP Address","Port","Password","Method"))
+    # parse U.S, Japan, and Singapore servers.
     get_proxy("col-sm-6 col-md-4 col-lg-4 us")
     get_proxy("col-sm-6 col-md-4 col-lg-4 jp")
     get_proxy("col-sm-6 col-md-4 col-lg-4 sg")
