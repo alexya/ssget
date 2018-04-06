@@ -7,6 +7,7 @@ from collections import namedtuple
 from pprint import pprint
 from subprocess import *
 from subprocess import STARTUPINFO # for python2, we need to import STARTUPINFO
+import requests
 
 class ProxyData:
     def __init__(self):
@@ -16,12 +17,24 @@ class ProxyData:
         self.Password = ''
         self.Method = ''
 
-url = "https://global.ishadowx.net/"
-url = "http://ss.ishadowx.com/"
 config_file = "gui-config.json"
 
-response = urllib2.urlopen(url)
-html_doc = response.read()
+url = "https://global.ishadowx.net/"
+url = "http://ss.ishadowx.com/"
+url = "https://get.ishadowx.net/"
+
+# solution 1: urlopen
+#response = urllib2.urlopen(url)
+
+# solution 2: request
+# we have to simulate user-agent to a browser, otherwise, the server will return 403
+headers = {
+    'User-agent': "Mozilla 5.10",
+    'cache-control': "no-cache",
+    'postman-token': "110d2989-c941-fea3-874f-f5c3c028db49"
+    }
+response = requests.request("GET", url, headers=headers)
+html_doc = response.text
 soup = BeautifulSoup(html_doc, 'html.parser')
 proxies = []
 
@@ -45,7 +58,7 @@ def get_proxy(class_def_name):
         if not proxy.Port:
             proxy.Port = '12345'
         proxies.append(proxy)
-        pprint("{:10}{:20}{:10}{:15}{:10}".format(proxy.Name, proxy.IPAddress, proxy.Port, proxy.Password, proxy.Method))
+        pprint("{:10}{:20}{:10}{:30}{:10}".format(proxy.Name, proxy.IPAddress, proxy.Port, proxy.Password, proxy.Method))
 
 def parse_config(file_name):
     # ssget folder will be put under the shadowsocksR
@@ -54,9 +67,6 @@ def parse_config(file_name):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     parent_path = os.path.abspath(os.path.join(dir_path, os.pardir))
     path_file_name = os.path.join(parent_path, file_name)
-
-    print
-    print("Found the config file {}.".format(path_file_name))
 
     with open(path_file_name) as jsonFile:
         json_data = json.load(jsonFile)
@@ -114,6 +124,9 @@ def parse_config(file_name):
         ss = json.dumps(json_data, sort_keys = True, indent = 4, separators = (',', ': '), encoding = "utf-8", ensure_ascii = True)
         jsonFile.write(ss)
 
+    print
+    print("Updated the config file {} successfully.".format(path_file_name))
+
     return True
 
 def launch_ssr():
@@ -125,6 +138,8 @@ def launch_ssr():
     return True
 
 if __name__ == "__main__":
+    pprint("{:10}{:20}{:10}{:30}{:10}".format("Name","IP Address","Port","Password","Method"))
+    # parse U.S, Japan, and Singapore servers.
     get_proxy("col-sm-6 col-md-4 col-lg-4 us")
     get_proxy("col-sm-6 col-md-4 col-lg-4 jp")
     get_proxy("col-sm-6 col-md-4 col-lg-4 sg")

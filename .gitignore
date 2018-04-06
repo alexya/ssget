@@ -99,3 +99,10 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# ssget
+/Include
+/Scripts
+/lib
+/tcl
+/pip-selfcheck.json
