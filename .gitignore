@@ -106,3 +106,4 @@ ENV/
 /lib
 /tcl
 /pip-selfcheck.json
+.vscode
