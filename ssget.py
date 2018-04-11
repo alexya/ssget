@@ -1,7 +1,9 @@
+from __future__ import print_function
 import urllib2
 import os 
 import re
 import json
+import time
 from bs4 import BeautifulSoup
 from collections import namedtuple
 from pprint import pprint
@@ -9,6 +11,7 @@ from subprocess import *
 from subprocess import STARTUPINFO # for python2, we need to import STARTUPINFO
 import requests
 import psutil
+from psutil import NoSuchProcess
 
 class ProxyData:
     def __init__(self):
@@ -149,8 +152,12 @@ def kill_proc_tree(pid, including_parent=True):
 def launch_ssr():
     # if the ShadowsocksR exists, then kill it first.
     for pid in psutil.pids():
-        p = psutil.Process(pid)
-        Pa = p.parent() != None
+        try:
+            p = psutil.Process(pid)
+        except NoSuchProcess as e:
+            # failed to find the process, go to next pid
+            continue
+
         if (p.name() == "ShadowsocksR.exe") and p.exe() == ssr_path:
             print("The process ShadowsocksR.exe: {id} is found.".format(id=pid))
             if (kill_proc_tree(pid) == True):
@@ -162,6 +169,31 @@ def launch_ssr():
         print("The process ShadowsocksR.exe: {id} is restarted successfully.".format(id=newproc.pid))
 
     return True
+
+def count_down_sample():
+    lineLength = 20
+    delaySeconds = 0.05
+    frontSymbol = '='
+    frontSymbol2= ["-", "\\", "|", "/"]
+    backSymbol = ' '
+    for i in range(10):
+        lineTmpla = "{:%s<%s} {} {:<2}"%(backSymbol, lineLength)
+        for j in range(lineLength):
+            tmpSymbol = frontSymbol2[j%(len(frontSymbol2))]
+            linestr = "\r" + lineTmpla.format(frontSymbol * j, tmpSymbol, j)
+            print(linestr, end="")
+            time.sleep(delaySeconds)
+    print
+
+def count_down(sec):
+    count = 0
+    while (count < sec):
+        count += 1
+        n = sec - count
+        linestr = "\rThe program will exit in {}s".format(n)
+        print(linestr, end='')
+        time.sleep(1)
+    print
 
 if __name__ == "__main__":
     pprint("{:10}{:20}{:10}{:30}{:10}".format("Name","IP Address","Port","Password","Method"))
@@ -175,3 +207,6 @@ if __name__ == "__main__":
 
     if (parse_config(config_file)):
         launch_ssr()
+
+        # sleep for a while, let user check the status and then exit
+        count_down(5)
