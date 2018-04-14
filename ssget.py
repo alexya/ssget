@@ -188,8 +188,8 @@ def count_down_sample():
 def count_down(sec):
     count = 0
     while (count < sec):
-        count += 1
         n = sec - count
+        count += 1
         linestr = "\rThe program will exit in {}s".format(n)
         print(linestr, end='')
         time.sleep(1)
