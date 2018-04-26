@@ -7,11 +7,15 @@ import time
 from bs4 import BeautifulSoup
 from collections import namedtuple
 from pprint import pprint
+
 from subprocess import *
 from subprocess import STARTUPINFO # for python2, we need to import STARTUPINFO
-import requests
+
 import psutil
 from psutil import NoSuchProcess
+
+import requests
+from requests.exceptions import ConnectionError
 
 class ProxyData:
     def __init__(self):
@@ -26,24 +30,42 @@ config_file = "gui-config.json"
 # We need the absolute path to find the root of SSR, then to kill the process tree
 ssr_path = "C:\\Tools\\ShadowsocksR\\ShadowsocksR.exe"
 
-url = "https://global.ishadowx.net/"
-url = "http://ss.ishadowx.com/"
-url = "https://get.ishadowx.net/" # the latest address
+urls = ["http://ss.ishadowx.com/",
+        "https://global.ishadowx.net/",
+        "https://get.ishadowx.net/"
+        ]
 
-# solution 1: urlopen
-#response = urllib2.urlopen(url)
-
-# solution 2: request
-# we have to simulate user-agent to a browser, otherwise, the server will return 403
 headers = {
     'User-agent': "Mozilla 5.10",
     'cache-control': "no-cache",
     'postman-token': "110d2989-c941-fea3-874f-f5c3c028db49"
     }
-response = requests.request("GET", url, headers=headers)
-html_doc = response.text
-soup = BeautifulSoup(html_doc, 'html.parser')
+
+soup = None
 proxies = []
+
+def request_ishadowx_html(URLs):
+    for url in URLs:
+        try:
+            # solution 1: urlopen
+            #response = urllib2.urlopen(url)
+
+            # solution 2: request
+            # we have to simulate user-agent to a browser, otherwise, the server will return 403
+            print("Connecting to: {url}".format(url=url))
+            response = requests.request("GET", url, headers=headers)
+            html_doc = response.text
+            global soup
+            soup = BeautifulSoup(html_doc, 'html.parser')
+            print("Data is fetched from: {url}".format(url=url))
+            return True
+
+        except ConnectionError as e:
+            print(e)
+            print
+            continue
+
+    return False
 
 def get_proxy(class_def_name):
     print
@@ -196,6 +218,9 @@ def count_down(sec):
     print
 
 if __name__ == "__main__":
+    if not request_ishadowx_html(urls):
+        print("Failed to connect to ishadowx server and get data.")
+
     pprint("{:10}{:20}{:10}{:30}{:10}".format("Name","IP Address","Port","Password","Method"))
     # parse U.S, Japan, and Singapore servers.
     get_proxy("col-sm-6 col-md-4 col-lg-4 us")
